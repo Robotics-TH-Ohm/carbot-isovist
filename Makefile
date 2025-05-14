@@ -9,6 +9,8 @@ SRC_DIR = src
 JAVA = java
 JAVAC = javac
 
+dev: compile run
+
 compile:
 	$(JAVAC) \
 		-cp .:$(CARBOT_DIR) \
@@ -27,4 +29,3 @@ run:
 		-e $(CARBOT_DIR)/environments/drivedemo.txt \
 		-c isovist.DriveDemo \
 		-skills -vss,+lss,+lssslam -lidarslam sim  -autorun
-

@@ -25,8 +25,8 @@
         packages.default = pkgs.hello;
 
 				devShells.default = pkgs.mkShell {
-					buildInputs = [
-						(pkgs.jdk23.override {
+					buildInputs = with pkgs; [
+						(jdk23.override {
 							enableJavaFX = true;
 						})
 					];
