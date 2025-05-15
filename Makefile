@@ -16,7 +16,7 @@ compile:
 		-cp .:$(CARBOT_DIR) \
 		-p .:$(SIM_LIBS):$(SIM_JARS)/Basics.jar:$(SIM_JARS)/Customsim.jar:$(SIM_JARS)/Driver.jar:$(SIM_JARS)/Platform.jar:$(SIM_JARS)/Robotinterface.jar:$(SIM_JARS)/Robotlib.jar:$(SIM_JARS)/Simulator.jar \
 		--add-modules Robotlib,Robotinterface \
-		$(SRC_DIR)/*.java $(SRC_DIR)/isovist/*.java
+		$(shell find $(SRC_DIR) -name *.java)
 
 
 run:
@@ -26,6 +26,9 @@ run:
 		--add-modules Customsim,Isovist \
 		-m Simulator \
 		-logdir logs \
-		-e $(CARBOT_DIR)/environments/drivedemo.txt \
-		-c isovist.DriveDemo \
+		-e environments/simple.txt \
+		-c isovist.MappingController \
 		-skills -vss,+lss,+lssslam -lidarslam sim  -autorun
+
+
+# -e $(CARBOT_DIR)/environments/environment.txt \
