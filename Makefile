@@ -30,5 +30,6 @@ run:
 		-c isovist.MappingController \
 		-skills -vss,+lss,+lssslam -lidarslam sim  -autorun
 
+		# -e $(CARBOT_DIR)/environments/drivedemo.txt \
 
 # -e $(CARBOT_DIR)/environments/environment.txt \

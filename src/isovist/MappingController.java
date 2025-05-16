@@ -37,6 +37,9 @@ import java.util.ArrayList;
 
 import basics.points.PointCloudCreator2D;
 import basics.points.PointList2D;
+import basics.points.Point;
+import basics.points.container.GridPointCloud2D;
+import basics.points.container.ArrayPointList;
 import robotinterface.Robot;
 import robotinterface.RobotController;
 import robotinterface.Time;
@@ -61,6 +64,9 @@ public class MappingController
 	double posX, posY, posAng;
 	double us;
 	boolean tactile;
+
+	ObstacleContainer obstaclesLidar;
+	GridPointCloud2D cloud;
 
   public MappingController() {
     Robot.motionSubsystem.registerMotionListener(this);
@@ -87,6 +93,26 @@ public class MappingController
         "Lidar Subsystem does not provide SLAM-corrected points"
       );
     }
+
+    // Hindernis-Karte einrichten
+    obstaclesLidar = new ObstacleContainer(
+        PointCloudCreator2D.TYPE_GRID,
+        10.0d,
+        ObstacleContainer.ADD_MODE_INSERT,
+        3.0d); // FUSION_MAX_LIDAR_DIST
+
+		// HACK: This doesn't work in real life
+		double[][] obstacles = Robot.lidarSubsystem.getAllObstacles();
+		cloud = new GridPointCloud2D(10, obstacles, Point.class);
+		paintObstacles(cloud.getAll2D(), "All Obstacle Points");
+  }
+
+  private void paintObstacles(double[][] obstacles, String overlayStr) {
+    DebugPainterOverlay ovl = Robot.debugPainter.getOverlay(overlayStr);
+    ovl.clear();
+    for (int i = 0; i < obstacles.length; i++)
+      ovl.fillCircle(obstacles[i][0], obstacles[i][1], 5, 200, 0, 0, 255);
+    ovl.paint();
   }
 
   public String getDescription() {
@@ -118,7 +144,10 @@ public class MappingController
     Robot.lidarSubsystem.startup();
     Robot.motionSubsystem.sendCommand("stoprule T,U50");
     // Demo init
-    Robot.motionSubsystem.sendCommand("fore 100");
+    Robot.motionSubsystem.sendCommand("fore 50");
+
+		Time.sleep(5000);
+    Robot.motionSubsystem.sendCommand("fore 400");
     // Do something reasonable
     while (isRunning()) {
       // ...
@@ -193,10 +222,124 @@ public class MappingController
   //   // ...
   //   // Process Raw Scan
   // }
+	
+	DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Robot");
 
   public void observedLidarPointsSlam(LidarPackageSlam lidarPackageSlam)
     throws Exception {
-    // ...
-    // Process SLAM-corrected Scan
+
+
+		// Idk if this is right
+		posX = lidarPackageSlam.observationPosX;
+		posY = lidarPackageSlam.observationPosY;
+		overlay.clear();
+		overlay.drawCross(posX, posY, 20, 0, 0, 0, 100);
+
+		ArrayList<ObservedLidarPointSlam> points = lidarPackageSlam.observedPoints;
+		ArrayPointList<Point> pointList = new ArrayPointList<>(points.size());
+		for (ObservedLidarPointSlam p : points) {
+			if (Double.isNaN(p.x)) continue;
+			pointList.add(new Point(p.x, p.y));
+		}
+
+		GridPointCloud2D lidarCloud = new GridPointCloud2D(10, pointList);
+		calcPoints(lidarCloud, "LiDAR");
+
+		// Paint seen lidar points -- THIS WORKS
+		//   DebugPainterOverlay ovl = Robot.debugPainter.getOverlay("Isovist Points");
+		// ovl.clear();
+		// for (int i = 0; i < points.size(); i++) {
+		// 	ObservedLidarPointSlam point = points.get(i);
+		//
+		// 	if (!Double.isNaN(point.x)) {
+		// 		// Regular point!
+		// 		ovl.fillCircle(point.x, point.y, 5, 0, 0, 0, 255);
+		// 	} else {
+		// 		// No point in this direction, assume maximum distance
+		// 		double dx = posX + Math.cos(point.lidarAngleRaw) * MAX_DIST;
+		// 		double dy = posY + Math.sin(point.lidarAngleRaw) * MAX_DIST;
+		//
+		// 		int xxx = point.isReliable() ? 0 : 255;
+		// 		ovl.fillCircle(dx, dy, 5, xxx, 0, 0, 255);
+		// 	}
+		//
+		// }
+		//   ovl.paint();
+
+		// for (ObservedLidarPointSlam p : points)
+		// 	Robot.debugOut.println(p.lidarAngleRaw + " | " + " - " + p.freeSpaceAngle() + " | " + p.x + "/" + p.y);
+		// Robot.debugOut.println("--------------------");
+		// stop();
+
+		// Paint Isovist rays
+		// ovl = Robot.debugPainter.getOverlay("Isovist Rays");
+		// ovl.clear();
+		// for (int i = 0; i < points.size(); i++) {
+		// 	ObservedLidarPointSlam point = points.get(i);
+		//  ovl.drawLine(lidarPackageSlam.observationPosX, lidarPackageSlam.observationPosY, point.x, point.y, 0, 255, 0, 100);
+		// }
+		// ovl.paint();
+
+
+		// ovl = Robot.debugPainter.getOverlay("Isovist Ploygon");
+		// ovl.clear();
+		// ovl.fillPoly(lidarPackageSlam.getPositionAsArray(Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), 0, 0, 255, 100);
+		// ovl.paint();
+
+		////////////////////////////////////////////////////////////////////////////////
+
+		calcPoints(cloud, "GRID");
   }
+
+	int MAX_DIST = 600;
+	int RAY_COUNT = 400;
+	double RADIUS = 5;
+
+	PointList2D<Point> calcPoints(GridPointCloud2D cloud, String name) {
+		PointList2D<Point> gridPs = new ArrayPointList(360);
+		
+		DebugPainterOverlay ovl = Robot.debugPainter.getOverlay("calcPoints(" + name + ")");
+		ovl.clear();
+		ovl.fillCircle(posX, posY, 50, 0, 0, 0, 50);
+
+		for (int i = 0; i < RAY_COUNT; ++i) {
+			double theta = ((float)i / RAY_COUNT) * 2 * Math.PI;
+			double dx = posX + Math.cos(theta) * MAX_DIST;
+			double dy = posY + Math.sin(theta) * MAX_DIST;
+
+			// BG line
+			ovl.drawLine(posX, posY, dx, dy, 0, 0, 0, 10);
+			
+			PointList2D<Point> ps = cloud.getInsideBeam(posX, posY, dx, dy, RADIUS);
+			Point p = null;
+
+			//for (Point p : ps)
+			//	ovl.fillCircle(p.getX(), p.getY(), 10, 0, 0, 255, 255);
+
+			if (ps.size() > 0) {
+				// Point found in beam!
+				p = ps.getKNearest(posX, posY, Double.POSITIVE_INFINITY, 1).get(0);
+			} else {
+				// No point, assume maximum viewing distance
+				p = new Point(dx, dy);
+			}
+
+			gridPs.add(p);
+			ovl.drawLine(posX, posY, p.getX(), p.getY(), 0, 0, 0, 100);
+			// for (Point p : ps)
+			// 	ovl.fillCircle(p.getX(), p.getY(), 5, 0, 255, 0, 255);
+		}
+
+		for (Point p : gridPs) {
+			ovl.fillCircle(p.getX(), p.getY(), RADIUS, 0, 255, 0, 255);
+		}
+		ovl.paint();
+
+		ovl = Robot.debugPainter.getOverlay("calcPoints(" + name + ") | POLYGON");
+		ovl.clear();
+		ovl.fillPoly(gridPs.getAll2D(), 0, 255, 0, 100);
+		ovl.paint();
+
+		return gridPs;
+	}
 }
