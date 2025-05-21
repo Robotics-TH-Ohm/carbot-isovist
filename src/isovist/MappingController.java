@@ -53,6 +53,9 @@ import robotlib.driver.Driver;
 import robotlib.worldmodel.ObstacleContainer;
 import robotlib.worldmodel.ObstaclePoint;
 
+import isovist.model.IsovistGrid;
+import isovist.model.Cell;
+
 
 public class MappingController
   extends RobotController
@@ -61,12 +64,16 @@ public class MappingController
     // LidarSubsystemListenerRaw,
     LidarSubsystemListenerSlam {
 
+
+	DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Robot");
+
 	double posX, posY, posAng;
 	double us;
 	boolean tactile;
 
 	ObstacleContainer obstaclesLidar;
 	GridPointCloud2D cloud;
+	IsovistGrid isovistGrid;
 
   public MappingController() {
     Robot.motionSubsystem.registerMotionListener(this);
@@ -105,6 +112,19 @@ public class MappingController
 		double[][] obstacles = Robot.lidarSubsystem.getAllObstacles();
 		cloud = new GridPointCloud2D(10, obstacles, Point.class);
 		paintObstacles(cloud.getAll2D(), "All Obstacle Points");
+
+		// Init isovist grid
+		// TODO: Make this more generic, esp. the starting position
+		//       Since this is just for testing, it's "fine" for now
+		isovistGrid = new IsovistGrid();
+		for (double[] o : obstacles) {
+			isovistGrid.set(o, new Cell(Cell.OBSTACLE));
+		}
+		isovistGrid.markAllReachable(isovistGrid.worldToGrid(500, 500));
+		isovistGrid.paint(Robot.debugPainter.getOverlay("GRID"));
+		overlay.clear();
+		overlay.fillCircle(500, 500, 20, 0, 0, 0, 255);
+		overlay.paint();
   }
 
   private void paintObstacles(double[][] obstacles, String overlayStr) {
@@ -223,11 +243,8 @@ public class MappingController
   //   // Process Raw Scan
   // }
 	
-	DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Robot");
-
   public void observedLidarPointsSlam(LidarPackageSlam lidarPackageSlam)
     throws Exception {
-
 
 		// Idk if this is right
 		posX = lidarPackageSlam.observationPosX;
