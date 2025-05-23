@@ -26,10 +26,11 @@ run:
 		--add-modules Customsim,Isovist \
 		-m Simulator \
 		-logdir logs \
-		-e environments/simple.txt \
+		-envscale 0.25 \
+		-e environments/sonsbeek.txt \
 		-c isovist.MappingController \
 		-skills -vss,+lss,+lssslam -lidarslam sim  -autorun
 
-		# -e $(CARBOT_DIR)/environments/drivedemo.txt \
 
+		# -e $(CARBOT_DIR)/environments/drivedemo.txt \
 # -e $(CARBOT_DIR)/environments/environment.txt \
