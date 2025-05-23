@@ -7,8 +7,10 @@ public class Cell {
   public static final byte START = 0b0000_1000;
 
   public static final byte FLOODED = 0b0001_0000;
+	public static final byte CARTOGRAPHED = 0b0010_0000;
 
   private final byte byteValue;
+	private Isovist isovist;
 
   public Cell() {
     this((byte) 0);
@@ -21,15 +23,26 @@ public class Cell {
   }
 
   public Cell with(byte... flags) {
-    return new Cell(this.byteValue, flags);
+    Cell c = new Cell(this.byteValue, flags);
+		c.isovist = isovist;
+		return c;
   }
 
   public Cell without(byte... flags) {
     byte newByteValue = byteValue;
     for (byte flag : flags)
       newByteValue = (byte) (newByteValue & ~flag);
-    return new Cell(newByteValue);
+
+		Cell c = new Cell(newByteValue);
+		c.isovist = isovist;
+		return c;
   }
+
+	public Cell withIsovist(Isovist i) {
+		Cell c = new Cell(this.byteValue);
+		c.isovist = i;
+		return c;
+	}
 
   public boolean hasAll(byte... flags) {
     for (byte flag : flags) {
@@ -50,6 +63,10 @@ public class Cell {
   public boolean hasNone(byte... flags) {
     return !hasAny(flags);
   }
+
+	public Isovist getIsovist() {
+		return this.isovist;
+	}
 
   public byte toByte() {
     return byteValue;

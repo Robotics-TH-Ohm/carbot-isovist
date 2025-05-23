@@ -44,9 +44,12 @@ import robotinterface.Robot;
 import robotinterface.RobotController;
 import robotinterface.Time;
 import robotinterface.debug.DebugPainterOverlay;
-import robotinterface.lss.LidarPackageSlam;
 import robotinterface.lss.LidarSubsystem;
 import robotinterface.lss.LidarSubsystemListenerSlam;
+import robotinterface.lss.LidarPackageSlam;
+import robotinterface.lss.LidarSubsystemListenerRaw;
+import robotinterface.lss.LidarPackageRaw;
+import robotinterface.lss.ObservedLidarPointRaw;
 import robotinterface.mss.AsyncMotionMessageBundle;
 import robotinterface.mss.MotionSubsystemListener;
 import robotlib.driver.Driver;
@@ -55,13 +58,14 @@ import robotlib.worldmodel.ObstaclePoint;
 
 import isovist.model.IsovistGrid;
 import isovist.model.Cell;
+import isovist.model.Isovist;
 
 
 public class MappingController
   extends RobotController
   implements
     MotionSubsystemListener,
-    // LidarSubsystemListenerRaw,
+    LidarSubsystemListenerRaw,
     LidarSubsystemListenerSlam {
 
 
@@ -86,7 +90,7 @@ public class MappingController
     }
     try {
       Robot.lidarSubsystem.setTiming(LidarSubsystem.EQUIDISTANT, 500);
-      // Robot.lidarSubsystem.registerLidarListenerRaw(this); // Receive raw Lidar points
+      Robot.lidarSubsystem.registerLidarListenerRaw(this); // Receive raw Lidar points
     } catch (UnsupportedOperationException e) {
       Robot.debugOut.println("Lidar Subsystem does not provide raw points");
     }
@@ -121,9 +125,12 @@ public class MappingController
 			isovistGrid.set(o, new Cell(Cell.OBSTACLE));
 		}
 		isovistGrid.markAllReachable(isovistGrid.worldToGrid(500, 500));
+		isovistGrid.calculateIsovists(cloud);
+
+		// Debug painting
 		isovistGrid.paint(Robot.debugPainter.getOverlay("GRID"));
 		overlay.clear();
-		overlay.fillCircle(500, 500, 20, 0, 0, 0, 255);
+		overlay.fillCircle(500, 500, 50, 255, 0, 0, 200);
 		overlay.paint();
   }
 
@@ -165,6 +172,9 @@ public class MappingController
     Robot.motionSubsystem.sendCommand("stoprule T,U50");
     // Demo init
     Robot.motionSubsystem.sendCommand("fore 50");
+
+		// Calculate the first isovist!
+
 
 		Time.sleep(5000);
     Robot.motionSubsystem.sendCommand("fore 400");
@@ -249,18 +259,31 @@ public class MappingController
 		// Idk if this is right
 		posX = lidarPackageSlam.observationPosX;
 		posY = lidarPackageSlam.observationPosY;
-		overlay.clear();
-		overlay.drawCross(posX, posY, 20, 0, 0, 0, 100);
+		// overlay.clear();
+		// overlay.drawCross(posX, posY, 20, 0, 0, 0, 100);
 
-		ArrayList<ObservedLidarPointSlam> points = lidarPackageSlam.observedPoints;
-		ArrayPointList<Point> pointList = new ArrayPointList<>(points.size());
-		for (ObservedLidarPointSlam p : points) {
-			if (Double.isNaN(p.x)) continue;
-			pointList.add(new Point(p.x, p.y));
-		}
+		// ArrayList<ObservedLidarPointSlam> points = lidarPackageSlam.observedPoints;
+		// ArrayPointList<Point> pointList = new ArrayPointList<>(points.size());
+		// for (ObservedLidarPointSlam p : points) {
+		// 	if (Double.isNaN(p.x)) continue;
+		// 	pointList.add(new Point(p.x, p.y));
+		// }
+		//
+		// GridPointCloud2D lidarCloud = new GridPointCloud2D(10, pointList);
+		// calcPoints(lidarCloud, "LiDAR");
 
-		GridPointCloud2D lidarCloud = new GridPointCloud2D(10, pointList);
-		calcPoints(lidarCloud, "LiDAR");
+
+		/// TESTING
+
+		// double[] pos = new double[] { posX, posY };
+		// Isovist i = new Isovist(Isovist.samplePointsFromLidar(lidarPackageSlam), pos);
+		// i.paint(Robot.debugPainter.getOverlay("LiDAR Isovist"), "0000FF");
+
+		// Isovist j = new Isovist(Isovist.samplePointsFromCloud(cloud, pos), pos);
+		// i.paint(Robot.debugPainter.getOverlay("Grid Isovist"), "00FF00");
+	
+		/// END TESTING
+
 
 		// Paint seen lidar points -- THIS WORKS
 		//   DebugPainterOverlay ovl = Robot.debugPainter.getOverlay("Isovist Points");
@@ -305,8 +328,40 @@ public class MappingController
 
 		////////////////////////////////////////////////////////////////////////////////
 
-		calcPoints(cloud, "GRID");
+		// calcPoints(cloud, "GRID");
   }
+
+	public void observedLidarPointsRaw(LidarPackageRaw lidarPackageRaw) {
+		ArrayList<ObservedLidarPointRaw> lidarPoints = lidarPackageRaw.observedPoints;
+		PointList2D<Point> points = new ArrayPointList(lidarPoints.size());
+
+		Robot.debugOut.println("Angle:" + lidarPackageRaw.observationAngle);
+		Robot.debugOut.println("Pos X:" + lidarPackageRaw.observationPosX);
+		Robot.debugOut.println("Pox Y:" + lidarPackageRaw.observationPosY);
+		Robot.debugOut.println("-----");
+
+		for (ObservedLidarPointRaw lidarPoint : lidarPoints) {
+			if (!lidarPoint.isValid()) continue;
+			double theta = (lidarPoint.lidarAngle / 360) * 2 * Math.PI;
+			double y = Math.cos(theta) * lidarPoint.lidarDistance;
+			double x = Math.sin(theta) * lidarPoint.lidarDistance;
+			points.add(new Point(x, y));
+		}
+
+
+		///
+
+		double[] isovistPos = isovistGrid.estimatePosition(points);
+		overlay.clear();
+		overlay.drawCross(isovistPos[0], isovistPos[1], 50, 0, 0, 255, 255);
+		overlay.paint();
+
+		///
+
+		// DebugPainterOverlay isovistOverlay = Robot.debugPainter.getOverlay("Grid Isovist");
+		// Cell c = isovistGrid.get(isovistGrid.worldToGrid(Robot.motionSubsystem.estimateCurrentPosition()));
+		// c.getIsovist().paint(isovistOverlay, "00FF00");
+	}
 
 	int MAX_DIST = 600;
 	int RAY_COUNT = 400;

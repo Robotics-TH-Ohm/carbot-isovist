@@ -4,14 +4,22 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.function.Predicate;
 
-import basics.grid.Grid;
 import robotinterface.Robot;
 import robotinterface.debug.DebugPainterOverlay;
+
+import basics.points.container.GridPointCloud2D;
+import basics.points.PointCloud2D;
+import basics.points.PointList2D;
+import basics.grid.Grid;
+import basics.points.Point;
 
 public class IsovistGrid {
 
   private Grid<Cell> storage = new Grid<Cell>(Grid.X_POSNEG | Grid.Y_POSNEG);
   private double size = 25;
+
+	private double[] min;
+	private double[] max;
 
   public double getGridSize() {
     return size;
@@ -47,16 +55,128 @@ public class IsovistGrid {
           ovl.fillCircle(x_, y_, size / 2, 255, 0, 0, 128);
         }
 
-        if (cell.hasAll(Cell.START)) {
-          ovl.drawText(x_, y_, "s", true, false, size / 2, 0, 0, 0, 128);
-        }
+        // if (cell.hasAll(Cell.START)) {
+        //   ovl.drawText(x_, y_, "s", true, false, size / 2, 0, 0, 0, 128);
+        // }
 
-        if (cell.hasAll(Cell.FLOODED)) {
-          ovl.fillCircle(x_, y_, size / 4, 0, 0, 255, 255);
-        }
+        // if (cell.hasAll(Cell.FLOODED)) {
+        //   ovl.fillCircle(x_, y_, size / 4, 0, 0, 255, 255);
+        // }
+
+        // if (cell.hasAll(Cell.CARTOGRAPHED)) {
+        //   ovl.drawCross(x_, y_, size, 0, 255, 255, 64);
+        // }
       }
     }
   }
+
+	public void calculateIsovists(PointCloud2D<Point> cloud) {
+		storage.processRect(
+			storage.getMinX(), storage.getMinY(),
+			storage.getMaxX(), storage.getMaxY(),
+			(_, x, y) -> calculateIsovist(cloud, x, y)
+		);
+		normalizeIsovists();
+	}
+
+	private void calculateIsovist(PointCloud2D<Point> cloud, int x, int y) {
+		Cell c = get(x, y);
+		if (c.hasNone(Cell.REACHABLE)) return; // nothing to do for unreachable cells
+
+		double[] pos = gridToWorld(x, y);
+		PointList2D<Point> sampledPoints = Isovist.samplePointsFromCloud(cloud, pos);
+		Isovist i = new Isovist(sampledPoints, pos);
+		c = c
+			.with(Cell.CARTOGRAPHED)
+			.withIsovist(i);
+
+		set(x, y, c);
+	}
+
+	private void normalizeIsovists() {
+		// Initialize min/max values
+		min = new double[Isovist.features.length];
+		max = new double[Isovist.features.length];
+		for (int i = 0; i < Isovist.features.length; ++i) {
+			min[i] = Double.POSITIVE_INFINITY;
+			max[i] = Double.NEGATIVE_INFINITY;
+		}
+
+		// Get min/max
+		storage.processRect(
+			storage.getMinX(), storage.getMinY(),
+			storage.getMaxX(), storage.getMaxY(),
+			(_, x, y) -> {
+				Cell c = get(x, y);
+				if (c.hasNone(Cell.CARTOGRAPHED)) return; // nothing to do here ...
+
+				double[] vec = c.getIsovist().getFeatures();
+				for (int i = 0; i < vec.length; ++i) {
+					min[i] = Math.min(min[i], vec[i]);
+					max[i] = Math.max(max[i], vec[i]);
+				}
+			}
+		);
+
+		// Normalize
+		storage.processRect(
+			storage.getMinX(), storage.getMinY(),
+			storage.getMaxX(), storage.getMaxY(),
+			(_, x, y) -> {
+				Cell c = get(x, y);
+				if (c.hasNone(Cell.CARTOGRAPHED)) return; // nothing to do here ...
+				c.getIsovist().normalizeFeatures(min, max);
+			}
+		);
+	}
+
+	public double[] estimatePosition(PointList2D<Point> points) {
+
+		GridPointCloud2D<Point> lidarCloud = new GridPointCloud2D(10, points);
+		PointList2D<Point> sampledPoints = Isovist.samplePointsFromCloud(lidarCloud, new double[] { 0, 0 });
+
+		Isovist i = new Isovist(sampledPoints, new double[] { 0, 0 });
+		i.normalizeFeatures(min, max);
+		Isovist minI = findSmallestDistance(i);
+
+		// DEBUG: Painting
+		DebugPainterOverlay o = Robot.debugPainter.getOverlay("RAW LiDAR");
+		o.clear();
+		i.paint(o, "FF0000");
+		// for (Point p : points) {
+		// 	o.fillCircle(p.getX(), p.getY(), 10, 0, 0, 0, 255);
+		// }
+		// for (Point p : sampledPoints) {
+		// 	o.fillCircle(p.getX(), p.getY(), 10, 255, 0, 0, 255);
+		// }
+		// o.paint();
+		// END: DEBUG
+
+		DebugPainterOverlay isoO = Robot.debugPainter.getOverlay("Matched Isovist");
+		minI.paint(isoO, "00FF00");
+
+		return minI.getPos();
+	}
+
+	private Isovist findSmallestDistance(Isovist i) {
+		double minDist = Double.POSITIVE_INFINITY;
+		Isovist minI = null;
+
+		for (int x = storage.getMinX(); x <= storage.getMaxX(); ++x) {
+			for (int y = storage.getMinY(); y <= storage.getMaxY(); ++y) {
+				Cell c = get(x, y);
+				if (c.hasNone(Cell.CARTOGRAPHED)) continue; // nothing to do here ...
+
+				double dist = i.distanceTo(c.getIsovist());
+				if (dist < minDist) {
+					minDist = dist;
+					minI = c.getIsovist();
+				}
+			}
+		} 
+
+		return minI;
+	}
 
   // Flood-fill processing //{{{
   // ----------------------------------------------------------------------------
