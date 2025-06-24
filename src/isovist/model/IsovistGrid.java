@@ -11,6 +11,7 @@ import basics.points.container.GridPointCloud2D;
 import basics.points.PointCloud2D;
 import basics.points.PointList2D;
 import basics.grid.Grid;
+import basics.grid.GridProcessor;
 import basics.points.Point;
 
 public class IsovistGrid {
@@ -178,6 +179,14 @@ public class IsovistGrid {
 		return minI;
 	}
 
+	public void processAll(GridProcessor<Grid<Cell>> processor) {
+		storage.processRect(
+			storage.getMinX(), storage.getMinY(),
+			storage.getMaxX(), storage.getMaxY(),
+			processor
+		);
+	}
+
   // Flood-fill processing //{{{
   // ----------------------------------------------------------------------------
 
@@ -248,16 +257,6 @@ public class IsovistGrid {
   }
 
   public synchronized void set(int x, int y, Cell cell) {
-    // Update grid boundaries
-    // if (x > storage.getMaxX())
-    //   storage.getMaxX() = x;
-    // if (x < storage.getMinX())
-    //   storage.getMinX() = x;
-    // if (y > storage.getMaxY())
-    //   storage.getMaxY() = y;
-    // if (y < storage.getMinY())
-    //   storage.getMinY() = y;
-    //
     storage.set(x, y, cell);
   }
 
@@ -347,5 +346,4 @@ public class IsovistGrid {
     return gridToWorld(pos.getX(), pos.getY());
   }
   // }}}
-
 }

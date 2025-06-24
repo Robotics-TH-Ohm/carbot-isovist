@@ -68,6 +68,7 @@ public class MappingController
   extends RobotController
   implements MotionSubsystemListener
 {
+	String filepath;
 	double posX, posY, posAng;
 	boolean isPositionValid = false;
 
@@ -95,18 +96,17 @@ public class MappingController
 
   public String getDescription()
 	{
-    return "Maps the entire environment and saves it as an isovist-based grid";
+    return "Maps the entire environment and saves it as an isovist-based grid. The configuration is the file path.";
   }
 
   public boolean requiresConfiguration()
 	{
-    return false;
+    return true;
   }
 
   public void configure(String params) throws IllegalArgumentException
 	{
-    // ...
-    // Accept a configuration and store it
+		this.filepath = params;
   }
 
   public void run() throws Exception
@@ -148,7 +148,7 @@ public class MappingController
 
 		// Serialize to file
 		Document doc = Serialization.isovistGridToDocument(isovistGrid);
-		Serialization.documentToFile(doc, "isovist-grid.xml");
+		Serialization.documentToFile(doc, filepath);
 
 		// Nothing more to do
 		stop();
