@@ -30,12 +30,12 @@ compile:
 run-localization:
 	$(CARBOTSIM) \
 		-c isovist.LocalizationController \
-		-skills -vss,+lss,+lssslam -lidarslam sim  -autorun
+		-skills -vss,+lss,+lssslam -lidarslam sim -autorun
 
 run-mapping:
 	$(CARBOTSIM) \
 		-c isovist.MappingController \
-		-skills -vss,+lss,+lssslam -lidarslam sim  -autorun
+		-skills -vss,+lss,+lssslam -lidarslam sim -autorun
 
 
 # -e $(CARBOT_DIR)/environments/drivedemo.txt \

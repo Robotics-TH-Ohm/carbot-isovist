@@ -67,12 +67,11 @@ public class LocalizationController
   extends RobotController
   implements
     // MotionSubsystemListener,
-    LidarSubsystemListenerRaw,
+    LidarSubsystemListenerRaw
     // LidarSubsystemListenerSlam {
 {
 	String filepath;
-
-	DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Robot");
+	DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Position Estimate");
 
 	double posX, posY, posAng;
 	double us;
@@ -146,12 +145,10 @@ public class LocalizationController
 		isovistGrid = Serialization.isovistGridFromDocument(document);
 
 		// Debug painting
-		isovistGrid.paint(Robot.debugPainter.getOverlay("GRID"));
-		overlay.clear();
-		overlay.fillCircle(500, 500, 50, 255, 0, 0, 200);
-		overlay.paint();
+		isovistGrid.paint(Robot.debugPainter.getOverlay("Grid"));
 
-		Time.sleep(20000);
+		// stop();
+		// if (1==1) return;
 
     // Demo init
     Robot.motionSubsystem.sendCommand("stoprule T,U50");
@@ -204,7 +201,7 @@ public class LocalizationController
       // Current pos x
       posY = bundle.getDouble(AsyncMotionMessage.Y);
       // Current pos y
-      posAng = bundle.getDouble(AsyncMotionMessage.ANG);
+    posAng = bundle.getDouble(AsyncMotionMessage.ANG);
       // Current angle
     }
     if (bundle.containsType(AsyncMotionMessage.TACTIL)) tactile =
@@ -223,90 +220,6 @@ public class LocalizationController
     }
   }
 
-  // public void observedLidarPointsRaw(LidarPackageRaw lidarPackageRaw)
-  //   throws Exception {
-  //   // ...
-  //   // Process Raw Scan
-  // }
-	
-  public void observedLidarPointsSlam(LidarPackageSlam lidarPackageSlam)
-    throws Exception {
-
-		// Idk if this is right
-		posX = lidarPackageSlam.observationPosX;
-		posY = lidarPackageSlam.observationPosY;
-		// overlay.clear();
-		// overlay.drawCross(posX, posY, 20, 0, 0, 0, 100);
-
-		// ArrayList<ObservedLidarPointSlam> points = lidarPackageSlam.observedPoints;
-		// ArrayPointList<Point> pointList = new ArrayPointList<>(points.size());
-		// for (ObservedLidarPointSlam p : points) {
-		// 	if (Double.isNaN(p.x)) continue;
-		// 	pointList.add(new Point(p.x, p.y));
-		// }
-		//
-		// GridPointCloud2D lidarCloud = new GridPointCloud2D(10, pointList);
-		// calcPoints(lidarCloud, "LiDAR");
-
-
-		/// TESTING
-
-		// double[] pos = new double[] { posX, posY };
-		// Isovist i = new Isovist(Isovist.samplePointsFromLidar(lidarPackageSlam), pos);
-		// i.paint(Robot.debugPainter.getOverlay("LiDAR Isovist"), "0000FF");
-
-		// Isovist j = new Isovist(Isovist.samplePointsFromCloud(cloud, pos), pos);
-		// i.paint(Robot.debugPainter.getOverlay("Grid Isovist"), "00FF00");
-	
-		/// END TESTING
-
-
-		// Paint seen lidar points -- THIS WORKS
-		//   DebugPainterOverlay ovl = Robot.debugPainter.getOverlay("Isovist Points");
-		// ovl.clear();
-		// for (int i = 0; i < points.size(); i++) {
-		// 	ObservedLidarPointSlam point = points.get(i);
-		//
-		// 	if (!Double.isNaN(point.x)) {
-		// 		// Regular point!
-		// 		ovl.fillCircle(point.x, point.y, 5, 0, 0, 0, 255);
-		// 	} else {
-		// 		// No point in this direction, assume maximum distance
-		// 		double dx = posX + Math.cos(point.lidarAngleRaw) * MAX_DIST;
-		// 		double dy = posY + Math.sin(point.lidarAngleRaw) * MAX_DIST;
-		//
-		// 		int xxx = point.isReliable() ? 0 : 255;
-		// 		ovl.fillCircle(dx, dy, 5, xxx, 0, 0, 255);
-		// 	}
-		//
-		// }
-		//   ovl.paint();
-
-		// for (ObservedLidarPointSlam p : points)
-		// 	Robot.debugOut.println(p.lidarAngleRaw + " | " + " - " + p.freeSpaceAngle() + " | " + p.x + "/" + p.y);
-		// Robot.debugOut.println("--------------------");
-		// stop();
-
-		// Paint Isovist rays
-		// ovl = Robot.debugPainter.getOverlay("Isovist Rays");
-		// ovl.clear();
-		// for (int i = 0; i < points.size(); i++) {
-		// 	ObservedLidarPointSlam point = points.get(i);
-		//  ovl.drawLine(lidarPackageSlam.observationPosX, lidarPackageSlam.observationPosY, point.x, point.y, 0, 255, 0, 100);
-		// }
-		// ovl.paint();
-
-
-		// ovl = Robot.debugPainter.getOverlay("Isovist Ploygon");
-		// ovl.clear();
-		// ovl.fillPoly(lidarPackageSlam.getPositionAsArray(Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), 0, 0, 255, 100);
-		// ovl.paint();
-
-		////////////////////////////////////////////////////////////////////////////////
-
-		// calcPoints(cloud, "GRID");
-  }
-
 	public void observedLidarPointsRaw(LidarPackageRaw lidarPackageRaw)
 	{
 		ArrayList<ObservedLidarPointRaw> lidarPoints = lidarPackageRaw.observedPoints;
@@ -317,78 +230,44 @@ public class LocalizationController
 		Robot.debugOut.println("Pox Y:" + lidarPackageRaw.observationPosY);
 		Robot.debugOut.println("-----");
 
+		DebugPainterOverlay pointOverlay = Robot.debugPainter.getOverlay("Raw LiDAR Points");
+		pointOverlay.clear();
 		for (ObservedLidarPointRaw lidarPoint : lidarPoints) {
 			if (!lidarPoint.isValid()) continue;
 			double theta = (lidarPoint.lidarAngle / 360) * 2 * Math.PI;
 			double y = Math.cos(theta) * lidarPoint.lidarDistance;
 			double x = Math.sin(theta) * lidarPoint.lidarDistance;
 			points.add(new Point(x, y));
+			pointOverlay.fillCircle(
+				x + lidarPackageRaw.observationPosX,
+				y + lidarPackageRaw.observationPosY,
+				10,
+				255, 0, 0, 255
+			);
 		}
+		pointOverlay.paint();
 
+		Isovist isovist = isovistGrid.findBestMatchingIsovist(points);
+		double[] isovistPos = isovist.getPos();
 
-		///
-
-		double[] isovistPos = isovistGrid.estimatePosition(points);
 		overlay.clear();
 		overlay.drawCross(isovistPos[0], isovistPos[1], 50, 0, 0, 255, 255);
+		overlay.drawArrow(
+			isovistPos[0],
+			isovistPos[1],
+			lidarPackageRaw.observationPosX,
+			lidarPackageRaw.observationPosY,
+			20,
+			255, 0, 255, 255
+		);
 		overlay.paint();
+
+		isovist.paint(Robot.debugPainter.getOverlay("Matched Isovist"), "0000FF");
 
 		///
 
 		// DebugPainterOverlay isovistOverlay = Robot.debugPainter.getOverlay("Grid Isovist");
 		// Cell c = isovistGrid.get(isovistGrid.worldToGrid(Robot.motionSubsystem.estimateCurrentPosition()));
 		// c.getIsovist().paint(isovistOverlay, "00FF00");
-	}
-
-	int MAX_DIST = 600;
-	int RAY_COUNT = 400;
-	double RADIUS = 5;
-
-	PointList2D<Point> calcPoints(GridPointCloud2D cloud, String name) {
-		PointList2D<Point> gridPs = new ArrayPointList(360);
-		
-		DebugPainterOverlay ovl = Robot.debugPainter.getOverlay("calcPoints(" + name + ")");
-		ovl.clear();
-		ovl.fillCircle(posX, posY, 50, 0, 0, 0, 50);
-
-		for (int i = 0; i < RAY_COUNT; ++i) {
-			double theta = ((float)i / RAY_COUNT) * 2 * Math.PI;
-			double dx = posX + Math.cos(theta) * MAX_DIST;
-			double dy = posY + Math.sin(theta) * MAX_DIST;
-
-			// BG line
-			ovl.drawLine(posX, posY, dx, dy, 0, 0, 0, 10);
-			
-			PointList2D<Point> ps = cloud.getInsideBeam(posX, posY, dx, dy, RADIUS);
-			Point p = null;
-
-			//for (Point p : ps)
-			//	ovl.fillCircle(p.getX(), p.getY(), 10, 0, 0, 255, 255);
-
-			if (ps.size() > 0) {
-				// Point found in beam!
-				p = ps.getKNearest(posX, posY, Double.POSITIVE_INFINITY, 1).get(0);
-			} else {
-				// No point, assume maximum viewing distance
-				p = new Point(dx, dy);
-			}
-
-			gridPs.add(p);
-			ovl.drawLine(posX, posY, p.getX(), p.getY(), 0, 0, 0, 100);
-			// for (Point p : ps)
-			// 	ovl.fillCircle(p.getX(), p.getY(), 5, 0, 255, 0, 255);
-		}
-
-		for (Point p : gridPs) {
-			ovl.fillCircle(p.getX(), p.getY(), RADIUS, 0, 255, 0, 255);
-		}
-		ovl.paint();
-
-		ovl = Robot.debugPainter.getOverlay("calcPoints(" + name + ") | POLYGON");
-		ovl.clear();
-		ovl.fillPoly(gridPs.getAll2D(), 0, 255, 0, 100);
-		ovl.paint();
-
-		return gridPs;
 	}
 }

@@ -1,5 +1,6 @@
 package isovist.model;
 
+import java.util.List;
 import java.util.ArrayList;
 
 import robotinterface.Robot;
@@ -28,8 +29,9 @@ public class Isovist {
 		calculateFeatures();
 	}
 
-	public Isovist(double[] featureVec) {
+	public Isovist(double[] featureVec, double[] pos) {
 		this.featureVec = featureVec;
+		this.pos = pos;
 	}
 
 	public void paint(DebugPainterOverlay overlay, String hexColor) {
@@ -67,6 +69,18 @@ public class Isovist {
 		return this.pos;
 	}
 
+	public void setPoints(List<Point> points)
+	{
+		PointList2D<Point> ps = new ArrayPointList(RAY_COUNT);
+		for (Point p : points)
+			ps.add(p);
+		this.points = ps;
+	}
+
+	public PointList2D<Point> getPoints() {
+		return this.points;
+	}
+
 	public double distanceTo(Isovist isovist) {
 		if (featureVec.length != isovist.featureVec.length) return -1;
 
@@ -75,6 +89,12 @@ public class Isovist {
 			sum += Math.pow(featureVec[i] - isovist.featureVec[i], 2);
 		}
 		return Math.sqrt(sum);
+	}
+
+	@Override
+	public String toString()
+	{
+		return "Isovist @ " + this.pos[0] + "/" + this.pos[1] + ": [" + featureVec[0] + "]";
 	}
 
 	////////////////////////////////////////////////////////////////////////////////

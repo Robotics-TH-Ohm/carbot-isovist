@@ -16,15 +16,31 @@ import java.io.File;
 import isovist.model.*;
 import isovist.model.features.*;
 
+import java.util.*;
+import java.util.stream.*;
+import basics.points.Point;
+
 public class Serialization
 {
 	public static Document isovistGridToDocument(IsovistGrid grid) throws Exception
 	{
 		DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 		Document doc = builder.newDocument();
+
     Element root = doc.createElement("isovist-map");
-		root.setAttribute("grid-size", String.valueOf(grid.getGridSize()));
     doc.appendChild(root);
+
+		Element gridDef = doc.createElement("grid");
+		gridDef.setAttribute("size", String.valueOf(grid.getGridSize()));
+		root.appendChild(gridDef);
+
+		Element minDef = doc.createElement("min");
+		minDef.appendChild(doc.createTextNode(Arrays.stream(grid.getMinValues()).mapToObj(String::valueOf).collect(Collectors.joining(";"))));
+		gridDef.appendChild(minDef);
+
+		Element maxDef = doc.createElement("max");
+		maxDef.appendChild(doc.createTextNode(Arrays.stream(grid.getMaxValues()).mapToObj(String::valueOf).collect(Collectors.joining(";"))));
+		gridDef.appendChild(maxDef);
 
 		// For every isovist (= cell) in map!
 		grid.processAll((storage, x, y) -> {
@@ -34,16 +50,30 @@ public class Serialization
 			Isovist iso = cell.getIsovist();
 			double[] features = iso.getFeatures();
 
+			// Create isovist element with metadata
 			Element elem = doc.createElement("isovist");
 			elem.setAttribute("grid-x", String.valueOf(x));
 			elem.setAttribute("grid-y", String.valueOf(y));
 			elem.setAttribute("cell", cell.toString());
+
+			// Add feature values
 			for (int i = 0; i < features.length; ++i)
 			{
 				Element feat = doc.createElement(Isovist.features[i].getName());
 				feat.appendChild(doc.createTextNode(String.valueOf(features[i])));
 				elem.appendChild(feat);
 			}
+
+			// Add original points (for debugging)
+			Element pointsElem = doc.createElement("points");
+			StringBuilder b = new StringBuilder();
+			double[][] points = iso.getPoints().getAll2D();
+			for (double[] p : points)
+				b.append(p[0] + "," + p[1] + ";");
+			b.deleteCharAt(b.length()-1);
+			pointsElem.appendChild(doc.createTextNode(b.toString()));
+			elem.appendChild(pointsElem);
+
 			root.appendChild(elem);
 		});
 
@@ -80,9 +110,12 @@ public class Serialization
 	public static IsovistGrid isovistGridFromDocument(Document doc) throws Exception
 	{
 		Element root = doc.getDocumentElement();
+		Element gridDef = (Element)root.getElementsByTagName("grid").item(0);
 
-		double size = Double.parseDouble(root.getAttribute("grid-size"));
-		IsovistGrid grid = new IsovistGrid(size);
+		double size = Double.parseDouble(gridDef.getAttribute("size"));
+		double[] min = Stream.of(gridDef.getElementsByTagName("min").item(0).getFirstChild().getNodeValue().split(";")).mapToDouble(Double::parseDouble).toArray();
+		double[] max = Stream.of(gridDef.getElementsByTagName("max").item(0).getFirstChild().getNodeValue().split(";")).mapToDouble(Double::parseDouble).toArray();
+		IsovistGrid grid = new IsovistGrid(size, min, max);
 
 		NodeList isovists = doc.getElementsByTagName("isovist");
 		for (int i = 0; i < isovists.getLength(); ++i)
@@ -102,7 +135,16 @@ public class Serialization
 				featureVec[f] = Double.parseDouble(val);
 			}
 
-			Isovist isovist = new Isovist(featureVec);
+			double[] pos = grid.gridToWorld(x, y);
+			Isovist isovist = new Isovist(featureVec, pos);
+
+			String pointsStr = elem.getElementsByTagName("points").item(0).getFirstChild().getNodeValue();
+			List<Point> points = Stream.of(pointsStr.split(";"))
+				.map(pStr -> pStr.split(","))
+				.map(p -> new Point(Double.parseDouble(p[0]), Double.parseDouble(p[1])))
+				.collect(Collectors.toList());
+			isovist.setPoints(points);
+
 			grid.set(x, y, cell.withIsovist(isovist));
 		}
 

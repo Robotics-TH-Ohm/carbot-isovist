@@ -23,11 +23,23 @@ public class IsovistGrid {
 	private double[] max;
 
 	public IsovistGrid() {}
-	public IsovistGrid(double size) { this.size = size; }
+	public IsovistGrid(double size, double[] min, double[] max) {
+		this.size = size;
+		this.min = min;
+		this.max = max;
+	}
 
   public double getGridSize() {
     return size;
   }
+
+	public double[] getMinValues() {
+		return this.min;
+	}
+
+	public double[] getMaxValues() {
+		return this.max;
+	}
 
   public void paint(DebugPainterOverlay ovl) {
     ovl.clear();
@@ -58,18 +70,6 @@ public class IsovistGrid {
         if (cell.hasAll(Cell.UNREACHABLE)) {
           ovl.fillCircle(x_, y_, size / 2, 255, 0, 0, 128);
         }
-
-        // if (cell.hasAll(Cell.START)) {
-        //   ovl.drawText(x_, y_, "s", true, false, size / 2, 0, 0, 0, 128);
-        // }
-
-        // if (cell.hasAll(Cell.FLOODED)) {
-        //   ovl.fillCircle(x_, y_, size / 4, 0, 0, 255, 255);
-        // }
-
-        // if (cell.hasAll(Cell.CARTOGRAPHED)) {
-        //   ovl.drawCross(x_, y_, size, 0, 255, 255, 64);
-        // }
       }
     }
   }
@@ -98,6 +98,22 @@ public class IsovistGrid {
 	}
 
 	private void normalizeIsovists() {
+		calculateMinMaxValues();
+
+		// Normalize
+		storage.processRect(
+			storage.getMinX(), storage.getMinY(),
+			storage.getMaxX(), storage.getMaxY(),
+			(_, x, y) -> {
+				Cell c = get(x, y);
+				if (c.hasNone(Cell.CARTOGRAPHED)) return; // nothing to do here ...
+				c.getIsovist().normalizeFeatures(min, max);
+			}
+		);
+	}
+
+	private void calculateMinMaxValues()
+	{
 		// Initialize min/max values
 		min = new double[Isovist.features.length];
 		max = new double[Isovist.features.length];
@@ -121,32 +137,27 @@ public class IsovistGrid {
 				}
 			}
 		);
-
-		// Normalize
-		storage.processRect(
-			storage.getMinX(), storage.getMinY(),
-			storage.getMaxX(), storage.getMaxY(),
-			(_, x, y) -> {
-				Cell c = get(x, y);
-				if (c.hasNone(Cell.CARTOGRAPHED)) return; // nothing to do here ...
-				c.getIsovist().normalizeFeatures(min, max);
-			}
-		);
 	}
 
-	public double[] estimatePosition(PointList2D<Point> points) {
-
+	public Isovist findBestMatchingIsovist(PointList2D<Point> points)
+	{
 		GridPointCloud2D<Point> lidarCloud = new GridPointCloud2D(10, points);
 		PointList2D<Point> sampledPoints = Isovist.samplePointsFromCloud(lidarCloud, new double[] { 0, 0 });
 
 		Isovist i = new Isovist(sampledPoints, new double[] { 0, 0 });
+		DebugPainterOverlay o = Robot.debugPainter.getOverlay("Isovist");
+		i.paint(o, "FF0000");
 		i.normalizeFeatures(min, max);
-		Isovist minI = findSmallestDistance(i);
+
+		System.out.println("ref iso: "+ i.toString());
+
+		return findSmallestDistance(i);
 
 		// DEBUG: Painting
-		DebugPainterOverlay o = Robot.debugPainter.getOverlay("RAW LiDAR");
-		o.clear();
-		i.paint(o, "FF0000");
+		// DebugPainterOverlay o = Robot.debugPainter.getOverlay("RAW LiDAR");
+		// o.clear();
+		// i.paint(o, "FF0000");
+
 		// for (Point p : points) {
 		// 	o.fillCircle(p.getX(), p.getY(), 10, 0, 0, 0, 255);
 		// }
@@ -156,10 +167,8 @@ public class IsovistGrid {
 		// o.paint();
 		// END: DEBUG
 
-		DebugPainterOverlay isoO = Robot.debugPainter.getOverlay("Matched Isovist");
-		minI.paint(isoO, "00FF00");
-
-		return minI.getPos();
+		// DebugPainterOverlay isoO = Robot.debugPainter.getOverlay("Matched Isovist");
+		// minI.paint(isoO, "00FF00");
 	}
 
 	private Isovist findSmallestDistance(Isovist i) {
@@ -172,12 +181,16 @@ public class IsovistGrid {
 				if (c.hasNone(Cell.CARTOGRAPHED)) continue; // nothing to do here ...
 
 				double dist = i.distanceTo(c.getIsovist());
+				// System.out.println("DIST: " + dist);
 				if (dist < minDist) {
 					minDist = dist;
 					minI = c.getIsovist();
 				}
 			}
 		} 
+
+		System.out.println("min dist: " + minDist);
+		System.out.println("minI: " + minI);
 
 		return minI;
 	}
