@@ -3,13 +3,22 @@ SIM_LIBS_DIR = $(CARBOT_DIR)/sim_libs
 SIM_LIBS = $(SIM_LIBS_DIR)/jts.jar:$(SIM_LIBS_DIR)/commons-math.jar:$(SIM_LIBS_DIR)/opencv-249.jar
 SIM_JARS = $(CARBOT_DIR)/jars
 
-AMR_MODULE = dev.vimkat.isovist
 SRC_DIR = src
 
 JAVA = java
 JAVAC = javac
 
-dev: compile run
+CARBOTSIM = $(JAVA) \
+	-cp .:$(CARBOT_DIR):$(SRC_DIR)/isovist \
+	-p $(CARBOT_DIR)/jars:$(SRC_DIR):$(SIM_LIBS) \
+	--add-modules Customsim,Isovist \
+	-m Simulator \
+	-logdir logs \
+	-envscale 0.25 \
+	-e environments/sonsbeek.txt \
+	-cfg isovist-grid.xml \
+
+dev: compile run-localization
 
 compile:
 	$(JAVAC) \
@@ -18,19 +27,16 @@ compile:
 		--add-modules Robotlib,Robotinterface \
 		$(shell find $(SRC_DIR) -name *.java)
 
+run-localization:
+	$(CARBOTSIM) \
+		-c isovist.LocalizationController \
+		-skills -vss,+lss,+lssslam -lidarslam sim  -autorun
 
-run:
-	$(JAVA) \
-		-cp .:$(CARBOT_DIR):$(SRC_DIR)/isovist \
-		-p $(CARBOT_DIR)/jars:$(SRC_DIR):$(SIM_LIBS) \
-		--add-modules Customsim,Isovist \
-		-m Simulator \
-		-logdir logs \
-		-envscale 0.25 \
-		-e environments/sonsbeek.txt \
+run-mapping:
+	$(CARBOTSIM) \
 		-c isovist.MappingController \
 		-skills -vss,+lss,+lssslam -lidarslam sim  -autorun
 
 
-		# -e $(CARBOT_DIR)/environments/drivedemo.txt \
+# -e $(CARBOT_DIR)/environments/drivedemo.txt \
 # -e $(CARBOT_DIR)/environments/environment.txt \

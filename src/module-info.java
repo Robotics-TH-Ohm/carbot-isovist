@@ -7,5 +7,7 @@ module Isovist {
   requires Robotinterface;
   requires Robotlib;
 
+	requires java.xml;
+
   exports isovist;
 }

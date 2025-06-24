@@ -28,16 +28,15 @@ public class Isovist {
 		calculateFeatures();
 	}
 
+	public Isovist(double[] featureVec) {
+		this.featureVec = featureVec;
+	}
+
 	public void paint(DebugPainterOverlay overlay, String hexColor) {
 		int[] rgb = ColorUtil.hex2col(hexColor);
 		overlay.clear();
 		overlay.fillPoly(points.getAll2D(), rgb[0], rgb[1], rgb[2], 100);
 		overlay.paint();
-
-		// Robot.debugOut.println("Feature vector for isovist at (" + pos[0] + "/" + pos[1] + ")");
-		// for (double val : featureVec)
-		// 	Robot.debugOut.println("-- " + val);
-		// Robot.debugOut.println("-----");
 	}
 
 	public static final Feature[] features  = new Feature[] {

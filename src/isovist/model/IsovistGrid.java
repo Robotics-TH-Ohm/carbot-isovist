@@ -22,6 +22,9 @@ public class IsovistGrid {
 	private double[] min;
 	private double[] max;
 
+	public IsovistGrid() {}
+	public IsovistGrid(double size) { this.size = size; }
+
   public double getGridSize() {
     return size;
   }

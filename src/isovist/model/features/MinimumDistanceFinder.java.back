@@ -1,0 +1,19 @@
+package isovist.model.features;
+
+import basics.grid.GridProcessor;
+
+public class MinimumDistanceFinder<Grid> implements GridProcessor<Grid> {
+	private Isovist reference;
+
+	private Isovist minI;
+	private double minDist;
+
+	public MinimumDistanceFinder(Isovist reference) {
+		this.reference = reference;
+	}
+
+	public void process(Grid grid, int x, int y) {
+		Cell c = grid.get(x, y);
+		if (c == null || c.hasNone(Cell.CARTOGRAPHED)) return;
+	}
+}

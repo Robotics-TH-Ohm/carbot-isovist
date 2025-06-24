@@ -1,7 +1,5 @@
 package isovist;
 
-import org.w3c.dom.Document;
-
 import basics.math.Geom;
 import basics.points.PointCloudCreator2D;
 import basics.points.PointList2D;
@@ -61,7 +59,10 @@ import robotlib.worldmodel.ObstaclePoint;
 import isovist.model.IsovistGrid;
 import isovist.model.Cell;
 import isovist.model.Isovist;
+
 import isovist.util.Serialization;
+import org.w3c.dom.Document;
+
 
 
 public class MappingController
