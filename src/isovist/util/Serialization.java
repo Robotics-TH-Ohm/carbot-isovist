@@ -116,6 +116,10 @@ public class Serialization
 		double[] min = Stream.of(gridDef.getElementsByTagName("min").item(0).getFirstChild().getNodeValue().split(";")).mapToDouble(Double::parseDouble).toArray();
 		double[] max = Stream.of(gridDef.getElementsByTagName("max").item(0).getFirstChild().getNodeValue().split(";")).mapToDouble(Double::parseDouble).toArray();
 		IsovistGrid grid = new IsovistGrid(size, min, max);
+		
+		for (double v : min) System.out.println("MIN: " + v);
+		System.out.println("---");
+		for (double v : max) System.out.println("MAX: " + v);
 
 		NodeList isovists = doc.getElementsByTagName("isovist");
 		for (int i = 0; i < isovists.getLength(); ++i)

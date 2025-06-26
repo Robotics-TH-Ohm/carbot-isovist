@@ -19,8 +19,8 @@ public class IsovistGrid {
   private Grid<Cell> storage = new Grid<Cell>(Grid.X_POSNEG | Grid.Y_POSNEG);
   private double size = 25;
 
-	private double[] min;
-	private double[] max;
+	private double[] min = new double[0];
+	private double[] max = new double[0];
 
 	public IsovistGrid() {}
 	public IsovistGrid(double size, double[] min, double[] max) {
@@ -137,6 +137,10 @@ public class IsovistGrid {
 				}
 			}
 		);
+
+		for (double v : min) System.out.println("MIN: " + v);
+		System.out.println("---");
+		for (double v : max) System.out.println("MAX: " + v);
 	}
 
 	public Isovist findBestMatchingIsovist(PointList2D<Point> points)
@@ -144,12 +148,17 @@ public class IsovistGrid {
 		GridPointCloud2D<Point> lidarCloud = new GridPointCloud2D(10, points);
 		PointList2D<Point> sampledPoints = Isovist.samplePointsFromCloud(lidarCloud, new double[] { 0, 0 });
 
-		Isovist i = new Isovist(sampledPoints, new double[] { 0, 0 });
+		// for (int i = 0; i < points.size(); ++i)
+		// 	System.out.println("LiDAR points   [" + i + "]: " + points.get(i));
+		// for (int i = 0; i < sampledPoints.size(); ++i)
+		// 	System.out.println("sampled points [" + i + "]: " + sampledPoints.get(i));
+
+		Isovist i = new Isovist(sampledPoints, null);
 		DebugPainterOverlay o = Robot.debugPainter.getOverlay("Isovist");
 		i.paint(o, "FF0000");
 		i.normalizeFeatures(min, max);
 
-		System.out.println("ref iso: "+ i.toString());
+		Robot.debugOut.println("REF ISO: " + i.toString());
 
 		return findSmallestDistance(i);
 

@@ -27,4 +27,9 @@ public class FeatureUtils {
 		double denom = max - min;
 		return Math.abs(denom) < EPS ? 0 : (value - min) / denom;
 	}
+
+	public static boolean isEPS(double v) { return v < EPS; }
+	public static double withEPS(double v) { return isEPS(v) ? Double.NaN : v; }
+	public static double withEPSZero(double v) { return isEPS(v) ? 0 : v; }
+	public static double clamp(double v, double min, double max) { return Math.max(min, Math.min(v, max)); }
 }

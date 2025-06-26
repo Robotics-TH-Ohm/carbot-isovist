@@ -45,7 +45,13 @@ public class Isovist {
 		Feature.area,
 		Feature.perimeter,
 		Feature.compactness,
-		Feature.drift
+		Feature.drift,
+		Feature.radialLengthMin,
+		Feature.radialLengthMean,
+		Feature.radialLengthMax,
+		Feature.radialMomentMean,
+		Feature.radialMomentVariance,
+		Feature.radialMomentSkewness,
 	};
 
 	private void calculateFeatures() {
@@ -94,7 +100,16 @@ public class Isovist {
 	@Override
 	public String toString()
 	{
-		return "Isovist @ " + this.pos[0] + "/" + this.pos[1] + ": [" + featureVec[0] + "]";
+		StringBuilder b = new StringBuilder();
+		if (this.pos != null)
+			b.append("Isovist @ " + this.pos[0] + "/" + this.pos[1] + "\n");
+		else
+			b.append("Isovist @ ??\n");
+
+		for (int i = 0; i < features.length; ++i)
+			b.append("  - " + features[i].getName() + ": " + featureVec[i] + "\n");
+
+		return b.toString();
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -104,6 +119,7 @@ public class Isovist {
 	public static final int RADIUS = 8;
 
 	public static PointList2D<Point> samplePointsFromCloud(PointCloud2D<Point> cloud, double[] pos) {
+		if (pos == null) pos = new double[] { 0, 0 };
 		PointList2D<Point> points = new ArrayPointList(RAY_COUNT);
 		
 		for (int i = 0; i < RAY_COUNT; ++i) {

@@ -1,5 +1,7 @@
 package isovist.model.features;
 
+import java.util.*;
+import java.util.stream.*;
 import java.util.function.*;
 import basics.points.Point;
 import basics.points.PointList2D;
@@ -87,6 +89,68 @@ public interface Feature {
 		Point centroid = FeatureUtils.centroid(points, area);
 		if (centroid == null) return 0.0;
 
-		return centroid.distanceTo2D(pos[0], pos[1]);
+		return centroid.distanceTo2D(pos != null ? pos[0] : 0, pos != null ? pos[1] : 0);
+	});
+
+	static String cacheKey(double[] pos) { return pos == null ? null : pos[0] + "," + pos[1]; }
+
+	// ===== Cache for radial lengths
+	// NOTE: Since we're only deploying the robot in a static context, having a global cache is fine.
+	static Map<String, double[]> lengthCache = new HashMap<String, double[]>();
+	static double[] computeLenghts(PointList2D<Point> points, double[] pos) {
+		String key = cacheKey(pos);
+		double[] lengths = lengthCache.containsKey(key)
+			? lengthCache.get(key)
+			: StreamSupport.stream(points.spliterator(), false).mapToDouble(p -> p.distanceTo2D(pos != null ? pos[0] : 0, pos != null ? pos[1] : 0)).toArray();
+		if (!lengthCache.containsKey(key) && key != null) lengthCache.put(key, lengths);
+		return lengths;
+	}
+	// =====
+
+	public static Feature radialLengthMin = new DoubleFeature("radial-length-min", (points, pos) -> {
+		if (points.size() == 0) return 0.0;
+		double[] lengths = computeLenghts(points, pos);
+		return Arrays.stream(lengths).min().orElse(0);
+	});
+
+	public static Feature radialLengthMax = new DoubleFeature("radial-length-max", (points, pos) -> {
+		if (points.size() == 0) return 0.0;
+		double[] lengths = computeLenghts(points, pos);
+		return Arrays.stream(lengths).max().orElse(0);
+	});
+
+	public static Feature radialLengthMean = new DoubleFeature("radial-length-mean", (points, pos) -> {
+		if (points.size() == 0) return 0.0;
+		double[] lengths = computeLenghts(points, pos);
+		return Arrays.stream(lengths).average().orElse(0);
+	});
+
+
+	// ===== Cache for radial moments
+	// NOTE: Since we're only deploying the robot in a static context, having a global cache is fine.
+	static Map<String, double[]> momentCache = new HashMap<String, double[]>();
+	static double[] computeMoments(PointList2D<Point> points, double[] pos) {
+		String key = cacheKey(pos);
+		double[] moments = momentCache.containsKey(key)
+			? momentCache.get(key)
+			: MomentCalculator.computeMomentValues(points, pos != null ? pos : new double[] { 0, 0 });
+		if (!momentCache.containsKey(key) && key != null) momentCache.put(key, moments);
+		return moments;
+	}
+
+	public static Feature radialMomentMean = new DoubleFeature("radial-moment-mean", (points, pos) -> {
+		if (points.size() == 0) return 0.0;
+		double[] moments = computeMoments(points, pos);
+		return moments[0];
+	});
+	public static Feature radialMomentVariance = new DoubleFeature("radial-moment-variance", (points, pos) -> {
+		if (points.size() == 0) return 0.0;
+		double[] moments = computeMoments(points, pos);
+		return moments[1];
+	});
+	public static Feature radialMomentSkewness = new DoubleFeature("radial-moment-skewness", (points, pos) -> {
+		if (points.size() == 0) return 0.0;
+		double[] moments = computeMoments(points, pos);
+		return moments[2];
 	});
 }

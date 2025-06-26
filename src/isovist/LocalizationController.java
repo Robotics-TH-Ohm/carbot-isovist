@@ -238,6 +238,9 @@ public class LocalizationController
 			double y = Math.cos(theta) * lidarPoint.lidarDistance;
 			double x = Math.sin(theta) * lidarPoint.lidarDistance;
 			points.add(new Point(x, y));
+			// System.out.println("Point at " + lidarPoint.lidarAngle + ": " + new Point(x, y).toString());
+			// System.out.println("original dist: " + lidarPoint.lidarDistance);
+			// System.out.println("---");
 			pointOverlay.fillCircle(
 				x + lidarPackageRaw.observationPosX,
 				y + lidarPackageRaw.observationPosY,
