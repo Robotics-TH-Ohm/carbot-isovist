@@ -30,7 +30,7 @@ compile:
 run-localization:
 	$(CARBOTSIM) \
 		-c isovist.LocalizationController \
-		-skills -vss,+lss,+lssslam -lidarslam sim -autorun
+		-skills -vss,+lss,+lssslam -lidarslam sim #-autorun
 
 run-mapping:
 	$(CARBOTSIM) \

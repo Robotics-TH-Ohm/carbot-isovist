@@ -154,11 +154,7 @@ public class IsovistGrid {
 		// 	System.out.println("sampled points [" + i + "]: " + sampledPoints.get(i));
 
 		Isovist i = new Isovist(sampledPoints, null);
-		DebugPainterOverlay o = Robot.debugPainter.getOverlay("Isovist");
-		i.paint(o, "FF0000");
 		i.normalizeFeatures(min, max);
-
-		Robot.debugOut.println("REF ISO: " + i.toString());
 
 		return findSmallestDistance(i);
 

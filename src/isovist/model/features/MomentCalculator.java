@@ -18,7 +18,7 @@ public class MomentCalculator {
 		double a3Sum = 0;
 
 		int step = 25;
-		DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Raw LiDAR Points");
+		DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Raw LiDAR Isovist");
 		overlay.clear();
 
 		for (int i = 0; i < points.size(); i += step) {

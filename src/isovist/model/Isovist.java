@@ -35,9 +35,16 @@ public class Isovist {
 	}
 
 	public void paint(DebugPainterOverlay overlay, String hexColor) {
+		paint(overlay, hexColor, new double[] { 0, 0 });
+	}
+
+	public void paint(DebugPainterOverlay overlay, String hexColor, double[] offset) {
+		PointList2D<Point> paintPoints = points.copyValuesFrom();
+		paintPoints.translate(offset[0], offset[1]);
 		int[] rgb = ColorUtil.hex2col(hexColor);
+
 		overlay.clear();
-		overlay.fillPoly(points.getAll2D(), rgb[0], rgb[1], rgb[2], 100);
+		overlay.fillPoly(paintPoints.getAll2D(), rgb[0], rgb[1], rgb[2], 100);
 		overlay.paint();
 	}
 
