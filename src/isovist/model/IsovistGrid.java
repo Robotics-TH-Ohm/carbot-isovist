@@ -155,6 +155,7 @@ public class IsovistGrid {
 
 		Isovist i = new Isovist(sampledPoints, null);
 		i.normalizeFeatures(min, max);
+		System.out.println("REF: " + i.toString());
 
 		return findSmallestDistance(i);
 

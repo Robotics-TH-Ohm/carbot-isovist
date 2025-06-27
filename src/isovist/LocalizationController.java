@@ -156,13 +156,13 @@ public class LocalizationController
 
 		// Time.sleep(5000);
     // Robot.motionSubsystem.sendCommand("curve -100 500");
-    // Robot.motionSubsystem.sendCommand("rotate 65");
+    Robot.motionSubsystem.sendCommand("rotate -65");
 		Time.sleep(1000);
     Robot.motionSubsystem.sendCommand("fore 600");
     // Do something reasonable
     while (isRunning()) {
       // ...
-      Time.sleep(100);
+      Time.sleep(1000);
       // Do not consume all the CPU power
       // ...
     }
@@ -247,6 +247,7 @@ public class LocalizationController
 			// System.out.println("Point at " + lidarPoint.lidarAngle + ": " + new Point(x, y).toString());
 			// System.out.println("original dist: " + lidarPoint.lidarDistance);
 			// System.out.println("---");
+
 			pointOverlay.fillCircle(
 				x + lidarPackageRaw.observationPosX,
 				y + lidarPackageRaw.observationPosY,

@@ -1,5 +1,7 @@
 package isovist.model.features;
 
+import java.util.Arrays;
+
 import robotinterface.debug.DebugPainterOverlay;
 import robotinterface.Robot;
 
@@ -9,28 +11,36 @@ import basics.points.PointList2D;
 public class MomentCalculator {
 
 	private static final double EPS = 1e-5;
+	public static final int STEP = 16;
 
 	public static double[] computeMomentValues(PointList2D<Point> points, double[] pos) {
 		if (points.size() < 3) return null;
 
+		int tris = 0;
 		double a1Sum = 0;
 		double a2Sum = 0;
 		double a3Sum = 0;
 
-		int step = 25;
 		DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Raw LiDAR Isovist");
 		overlay.clear();
 
-		for (int i = 0; i < points.size(); i += step) {
+		for (int i = 0; i < points.size(); i += STEP) {
 			Point cur = points.get(i);
-			Point next = (i + step >= points.size()) ? points.get(points.size() - i - step) : points.get(i + step);
+			Point next = (i + STEP >= points.size()) ? points.get(points.size() - i + STEP) : points.get(i + STEP);
 
 			double a = cur.distanceTo2D(pos[0], pos[1]);
 			double b = next.distanceTo2D(pos[0], pos[1]);
 			double c = cur.distanceTo2D(next);
 
+			// DEBUG: Draw triangle
 			overlay.drawLine(0, 0, cur.getX(), cur.getY(), 0, 0, 0, 100);
 			overlay.drawLine(0, 0, next.getX(), next.getY(), 255, 0, 0, 100);
+
+			// Normalize triangle lengths
+			double max = Math.max(Math.max(a, b), c);
+			a /= max;
+			b /= max;
+			c /= max;
 
 			if (a == 0 || b == 0 || c == 0) continue;
 
@@ -41,37 +51,46 @@ public class MomentCalculator {
 
 			if (Double.isNaN(alpha) || Double.isNaN(beta) || Double.isNaN(gamma)) continue;
 
-			double angleSum = alpha + beta + gamma;
-			if (Math.abs(angleSum - Math.PI) > 0.01) continue;
+			double _a1 = computeA1(a, b, c, gamma);
+			double _a2 = computeA2(a, b, c, alpha, beta, gamma);
+			double _a3 = computeA3(a, b, c, alpha, beta, gamma);
 
-			Double _a1 = safeComputeA1(a, b, c, gamma);
-			Double _a2 = safeComputeA2(a, b, c, alpha, beta, gamma);
-			Double _a3 = safeComputeA3(a, b, c, alpha, beta, gamma);
+			// DEBUGGING FOR TRIANGLES
+			// System.out.println("Calculating triangle at index " + i);
+			// System.out.println("Lengths: " + a + " | " + b + " | " + c);
+			// System.out.println("Angles: " + Arrays.toString(angles));
+			// System.out.println("cot(α): " + cot(angles[0]) + ", cot(β): " + cot(angles[1]));
+			// System.out.println("cosec(α): " + cosec(angles[0]) + ", cosec(β): " + cosec(angles[1]));
+			// System.out.println("a1: " + _a1 + " | a2: " + _a2 + " | a3: " + _a3);
+			// System.out.println("A1: " + a1Sum + " | A2: " + a2Sum + " | A3: " + a3Sum);
+			// System.out.println("-----");
 
-			if (_a1 == null || _a2 == null || _a3 == null) continue;
+			if (Double.isNaN(_a1) || Double.isNaN(_a2) || Double.isNaN(_a3)) continue;
 
-			if (_a1 > 1e6 || _a2 > 1e6 || _a3 > 1e6) {
-				System.out.printf("[DEBUG] Huge moments at i=%d\n", i);
-				System.out.printf("Lengths: a=%.3f, b=%.3f, c=%.3f\n", a, b, c);
-				System.out.printf("Angles: alpha=%.5f, beta=%.5f, gamma=%.5f\n", alpha, beta, gamma);
-				System.out.printf("Moments: A1=%.5e, A2=%.5e, A3=%.5e\n\n", _a1, _a2, _a3);
-			}
-
+			tris++;
 			a1Sum += _a1;
 			a2Sum += _a2;
 			a3Sum += _a3;
 		}
 		overlay.paint();
 
+		// System.out.println("E_A1: " + a1Sum + " | E_A2: " + a2Sum + " | E_A3: " + a3Sum);
 		double a1 = a1Sum / (2 * Math.PI);
 		double a2 = a2Sum / (2 * Math.PI);
 		double a3 = a3Sum / (2 * Math.PI);
+		// System.out.println("A1: " + a1+ " | A2: " + a2+ " | A3: " + a3);
 
 		double m1 = a1;
 		double m2 = a2 - m1 * m1;
 		double m3 = a3 - 3 * m1 * a2 + 2 * m1 * m1 * m1;
 
-		return new double[] { m1, m2, m3 };
+		double[] moments = new double[] { m1, m2, m3 };
+
+		System.out.println("Moments: " + Arrays.toString(Arrays.stream(moments).mapToObj(v -> String.format("%.16f", v)).toArray())); // Adjust the precision as needed
+		System.out.println("used tris: " + tris);
+		System.out.println("===");
+
+		return moments;
 	}
 
 	private static double[] computeAngles(double a, double b, double c) {
@@ -86,82 +105,59 @@ public class MomentCalculator {
 		return new double[] { alpha, beta, gamma };
 	}
 
-	private static Double safeComputeA1(double a, double b, double c, double gamma) {
-		try {
-			double _1st = a * b / c;
-			double _2nd = Math.sin(gamma) / gamma;
+	private static double computeA1(double a, double b, double c, double gamma) {
+		double _1st = a * b / c;
+		double _2nd = Math.sin(gamma) / gamma;
 
-			double cosGamma = Math.cos(gamma);
-			double _3rdNum = (c + a - b * cosGamma) * (c + b - a * cosGamma);
-			double _3rdDenom = a * b * Math.pow(Math.sin(gamma), 2);
+		double cosGamma = Math.cos(gamma);
+		double _3rdNum = (c + a - b * cosGamma) * (c + b - a * cosGamma);
+		double _3rdDenom = a * b * Math.pow(Math.sin(gamma), 2);
+		if (_3rdDenom < EPS || _3rdNum <= 0) return Double.NaN;
+		double _3rd = Math.log(_3rdNum / _3rdDenom);
 
-			if (_3rdDenom < EPS || _3rdNum <= 0) return null;
-			double _3rd = Math.log(_3rdNum / _3rdDenom);
-
-			double result = _1st * _2nd * _3rd;
-			return (Math.abs(result) > 1e6) ? null : result;
-		} catch (Exception e) {
-			return null;
-		}
+		return _1st * _2nd * _3rd;
 	}
 
-	private static Double safeComputeA2(double a, double b, double c, double alpha, double beta, double gamma) {
-		try {
-			double _1st = 1 / gamma;
-			double _2nd = Math.pow(a * b * Math.sin(gamma) / c, 2);
+	private static double computeA2(double a, double b, double c, double alpha, double beta, double gamma) {
+		double _1st = 1 / gamma;
+		double _2nd = Math.pow(a * b * Math.sin(gamma) / c, 2);
+		double cotAlpha = cot(alpha);
+		double cotBeta = cot(beta);
+		if (Double.isNaN(cotAlpha) || Double.isNaN(cotBeta)) return Double.NaN;
+		double _3rd = cotAlpha + cotBeta;
 
-			double cotAlpha = cot(alpha);
-			double cotBeta = cot(beta);
-			if (Double.isNaN(cotAlpha) || Double.isNaN(cotBeta)) return null;
-			double _3rd = cotAlpha + cotBeta;
-
-			double result = _1st * _2nd * _3rd;
-			return (Math.abs(result) > 1e6) ? null : result;
-		} catch (Exception e) {
-			return null;
-		}
+		return _1st * _2nd * _3rd;
 	}
 
-	private static Double safeComputeA3(double a, double b, double c, double alpha, double beta, double gamma) {
-		try {
-			double _1st = 1 / (2 * gamma);
-			double _2nd = Math.pow(a * b * Math.sin(gamma) / c, 3);
+	private static double computeA3(double a, double b, double c, double alpha, double beta, double gamma) {
+		double _1st = 1 / (2 * gamma);
+		double _2nd = Math.pow(a * b * Math.sin(gamma) / c, 3);
 
-			double cosecAlpha = cosec(alpha);
-			double cotAlpha = cot(alpha);
-			double cosecBeta = cosec(beta);
-			double cotBeta = cot(beta);
+		double cosecAlpha = cosec(alpha);
+		double cotAlpha = cot(alpha);
+		double cosecBeta = cosec(beta);
+		double cotBeta = cot(beta);
 
-			if (Double.isNaN(cosecAlpha) || Double.isNaN(cosecBeta) ||
-					Double.isNaN(cotAlpha) || Double.isNaN(cotBeta)) return null;
+		if (Double.isNaN(cosecAlpha) || Double.isNaN(cosecBeta) ||
+				Double.isNaN(cotAlpha) || Double.isNaN(cotBeta)) return Double.NaN;
 
-			double sum1 = cosecAlpha + cotAlpha;
-			double sum2 = cosecBeta + cotBeta;
-			if (sum1 * sum2 <= 0) return null; // log invalid
+		double _3rdLeft = cosecAlpha * cotAlpha + cosecBeta * cotBeta;
+		double _3rdRight = Math.log((cosecAlpha + cotAlpha) * (cosecBeta + cotBeta));
+		double _3rd = _3rdLeft + _3rdRight;
 
-			double _3rdLeft = cosecAlpha * cotAlpha + cosecBeta * cotBeta;
-			double _3rdRight = Math.log(sum1 * sum2);
-			double _3rd = _3rdLeft + _3rdRight;
-
-			double result = _1st * _2nd * _3rd;
-			return (Math.abs(result) > 1e6) ? null : result;
-		} catch (Exception e) {
-			return null;
-		}
+		return _1st * _2nd * _3rd;
 	}
 
 	private static double cot(double angle) {
+		if (angle < 1e-3 || Math.abs(angle - Math.PI) < 1e-3) return Double.NaN;
 		double tan = Math.tan(angle);
-		if (Math.abs(tan) < EPS) return Double.NaN;
-		double result = 1 / tan;
-		return Math.abs(result) > 1e5 ? Double.NaN : result;
+		return Math.abs(tan) < EPS ? Double.NaN : 1 / tan;
 	}
 
 	private static double cosec(double angle) {
+		if (angle < 1e-3 || Math.abs(angle - Math.PI) < 1e-3) return Double.NaN;
 		double sin = Math.sin(angle);
-		if (Math.abs(sin) < EPS) return Double.NaN;
-		double result = 1 / sin;
-		return Math.abs(result) > 1e5 ? Double.NaN : result;
+		return Math.abs(sin) < EPS ? Double.NaN : 1 / sin;
 	}
 
 	private static double clamp(double val, double min, double max) {
