@@ -65,10 +65,7 @@ import org.w3c.dom.Document;
 
 public class LocalizationController
   extends RobotController
-  implements
-    // MotionSubsystemListener,
-    LidarSubsystemListenerRaw
-    // LidarSubsystemListenerSlam {
+  implements LidarSubsystemListenerRaw
 {
 	String filepath;
 	DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Position Estimate");
@@ -81,12 +78,10 @@ public class LocalizationController
 
   public LocalizationController()
 	{
-		//   Robot.motionSubsystem.registerMotionListener(this); // Receive MMS messages
-		//   if (Robot.lidarSubsystem == null)
-		// {
-		//     Robot.debugOut.println("No Lidar Subsystem available - I cannot see anything!");
-		//     return;
-		//   }
+		if (Robot.lidarSubsystem == null) {
+			Robot.debugOut.println("No Lidar Subsystem available - I cannot see anything!");
+			return;
+		}
 
     try
 		{
@@ -97,16 +92,6 @@ public class LocalizationController
 		{
       Robot.debugOut.println("Lidar Subsystem does not provide raw points");
     }
-		//
-		//   try
-		// {
-		//     Robot.lidarSubsystem.registerLidarListenerSlam(this); // Receive corr. Lidar points
-		//     Robot.lidarSubsystem.setMSSCorrection(true); // Lidar-SLAM correct position
-		//   }
-		// catch (UnsupportedOperationException e)
-		// {
-		//     Robot.debugOut.println("Lidar Subsystem does not provide SLAM-corrected points");
-		//   }
   }
 
 
@@ -123,6 +108,17 @@ public class LocalizationController
   public void configure(String params) throws IllegalArgumentException
 	{
 		this.filepath = params;
+
+		try {
+			// Load isovist grid
+			Document document = Serialization.readDocumentFromFile(filepath);
+			isovistGrid = Serialization.isovistGridFromDocument(document);
+
+			// Debug painting
+			isovistGrid.paint(Robot.debugPainter.getOverlay("Grid"));
+		} catch (Exception e) {
+			Robot.debugOut.println("Can't read isovist file");
+		}
   }
 
   public void run() throws Exception {
@@ -142,13 +138,6 @@ public class LocalizationController
 
 		// The last N points from isovist positioning
 		lastPoints = new ArrayPointList(POINT_HISTORY_COUNT);
-
-		// Load isovist grid
-		Document document = Serialization.readDocumentFromFile(filepath);
-		isovistGrid = Serialization.isovistGridFromDocument(document);
-
-		// Debug painting
-		isovistGrid.paint(Robot.debugPainter.getOverlay("Grid"));
 
     // Demo init
     Robot.motionSubsystem.sendCommand("stoprule T,U50");
@@ -316,6 +305,6 @@ public class LocalizationController
 		);
 		overlay.paint();
 
-		isovist.paint(Robot.debugPainter.getOverlay("Matched Isovist"), "0000FF");
+		isovist.paint(Robot.debugPainter.getOverlay("Matched Isovist"), "00FF00");
 	}
 }
