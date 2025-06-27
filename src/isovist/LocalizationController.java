@@ -65,7 +65,7 @@ import org.w3c.dom.Document;
 
 public class LocalizationController
   extends RobotController
-  implements LidarSubsystemListenerRaw
+  implements LidarSubsystemListenerRaw, MotionSubsystemListener
 {
 	String filepath;
 	DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Position Estimate");
@@ -78,6 +78,7 @@ public class LocalizationController
 
   public LocalizationController()
 	{
+		Robot.motionSubsystem.registerMotionListener(this);
 		if (Robot.lidarSubsystem == null) {
 			Robot.debugOut.println("No Lidar Subsystem available - I cannot see anything!");
 			return;
@@ -143,14 +144,14 @@ public class LocalizationController
     Robot.motionSubsystem.sendCommand("stoprule T,U50");
 
 		// === Demo 1
-		// Time.sleep(1000);
-		//   Robot.motionSubsystem.sendCommand("fore 600");
+		Time.sleep(1000);
+		Robot.motionSubsystem.sendCommand("fore 600");
 		// --
 
 		// === Demo 2
-		  Robot.motionSubsystem.sendCommand("rotate -65");
-		Time.sleep(1000);
-		  Robot.motionSubsystem.sendCommand("fore 600");
+		// Robot.motionSubsystem.sendCommand("rotate -65");
+		// Time.sleep(1000);
+		// Robot.motionSubsystem.sendCommand("fore 600");
 		// --
 
 		// Do not consume all the CPU power
@@ -206,19 +207,21 @@ public class LocalizationController
     if (bundle.containsType(AsyncMotionMessage.COLLISION_TACTIL)) {
       // ...
       // Taktil collision detected!
+			System.out.println("TAKTT");
     }
     if (bundle.containsType(AsyncMotionMessage.COLLISION_US)) {
       // ...
       // US collision detected!
+			System.out.println("US");
     }
   }
 
-	public static int LOST_TRACE_THRESHOLD = 10;
+	public static int LOST_TRACE_THRESHOLD = 5;
 	public static int POINT_HISTORY_COUNT = 5;
 	public static double LAST_POINT_DIST = 150;
 	private PointList2D<Point> lastPoints;
 	private int lastTimeSinceAdd = 0;
-	public void observedLidarPointsRaw(LidarPackageRaw lidarPackageRaw)
+	public void observedLidarPointsRaw(LidarPackageRaw lidarPackageRaw) throws Exception
 	{
 		ArrayList<ObservedLidarPointRaw> lidarPoints = lidarPackageRaw.observedPoints;
 		PointList2D<Point> points = new ArrayPointList(lidarPoints.size());
@@ -237,9 +240,6 @@ public class LocalizationController
 			double y = Math.cos(theta) * lidarPoint.lidarDistance;
 			double x = Math.sin(theta) * lidarPoint.lidarDistance;
 			points.add(new Point(x, y));
-			// System.out.println("Point at " + lidarPoint.lidarAngle + ": " + new Point(x, y).toString());
-			// System.out.println("original dist: " + lidarPoint.lidarDistance);
-			// System.out.println("---");
 		}
 		PointList2D<Point> paintPoints = points.copyValuesFrom();
 		paintPoints.rotate0(-lidarPackageRaw.observationAngle * Math.PI/180);
@@ -259,8 +259,10 @@ public class LocalizationController
 		double[] isovistPos = isovist.getPos();
 
 		// Reset last point trace when there was no point added for some time (= trace got lost)
-		if (lastTimeSinceAdd >= LOST_TRACE_THRESHOLD)
+		if (lastTimeSinceAdd >= LOST_TRACE_THRESHOLD) {
 			lastPoints = new ArrayPointList(POINT_HISTORY_COUNT);
+			lastTimeSinceAdd = 0;
+		}
 
 		// Add new point to the trace
 		Point newPoint = new Point(isovistPos[0], isovistPos[1]);
