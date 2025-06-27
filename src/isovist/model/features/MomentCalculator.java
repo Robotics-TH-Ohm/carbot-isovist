@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import robotinterface.debug.DebugPainterOverlay;
 import robotinterface.Robot;
+import basics.points.container.ArrayPointList;
 
 import basics.points.Point;
 import basics.points.PointList2D;
@@ -15,6 +16,7 @@ public class MomentCalculator {
 
 	public static double[] computeMomentValues(PointList2D<Point> points, double[] pos) {
 		if (points.size() < 3) return null;
+		double[] _pos = pos == null ? new double[] { 0, 0 } : pos;
 
 		int tris = 0;
 		double a1Sum = 0;
@@ -22,19 +24,17 @@ public class MomentCalculator {
 		double a3Sum = 0;
 
 		DebugPainterOverlay overlay = Robot.debugPainter.getOverlay("Raw LiDAR Isovist");
+		PointList2D<Point> paintPoints = new ArrayPointList<Point>(points.size() / STEP);
 		overlay.clear();
 
 		for (int i = 0; i < points.size(); i += STEP) {
 			Point cur = points.get(i);
 			Point next = (i + STEP >= points.size()) ? points.get(points.size() - i + STEP) : points.get(i + STEP);
+			paintPoints.add(new Point(cur));
 
-			double a = cur.distanceTo2D(pos[0], pos[1]);
-			double b = next.distanceTo2D(pos[0], pos[1]);
+			double a = cur.distanceTo2D(_pos[0], _pos[1]);
+			double b = next.distanceTo2D(_pos[0], _pos[1]);
 			double c = cur.distanceTo2D(next);
-
-			// DEBUG: Draw triangle
-			overlay.drawLine(0, 0, cur.getX(), cur.getY(), 0, 0, 0, 100);
-			overlay.drawLine(0, 0, next.getX(), next.getY(), 255, 0, 0, 100);
 
 			// Normalize triangle lengths
 			double max = Math.max(Math.max(a, b), c);
@@ -72,6 +72,15 @@ public class MomentCalculator {
 			a2Sum += _a2;
 			a3Sum += _a3;
 		}
+
+		// DEBUG: Draw triangle
+		double[] paintPos = pos == null ? Robot.motionSubsystem.estimateCurrentPosition() : _pos;
+		if (pos == null) {
+			paintPoints.rotate0(-paintPos[2] * Math.PI/180);
+			paintPoints.translate(paintPos[0], paintPos[1]);
+		}
+		for (Point p : paintPoints)
+			overlay.drawLine(paintPos[0], paintPos[1], p.getX(), p.getY(), 0, 0, 0, 100);
 		overlay.paint();
 
 		// System.out.println("E_A1: " + a1Sum + " | E_A2: " + a2Sum + " | E_A3: " + a3Sum);

@@ -140,6 +140,9 @@ public class LocalizationController
     }
     Robot.lidarSubsystem.startup();
 
+		// The last N points from isovist positioning
+		lastPoints = new ArrayPointList(POINT_HISTORY_COUNT);
+
 		// Load isovist grid
 		Document document = Serialization.readDocumentFromFile(filepath);
 		isovistGrid = Serialization.isovistGridFromDocument(document);
@@ -147,24 +150,23 @@ public class LocalizationController
 		// Debug painting
 		isovistGrid.paint(Robot.debugPainter.getOverlay("Grid"));
 
-		// stop();
-		// if (1==1) return;
-
     // Demo init
     Robot.motionSubsystem.sendCommand("stoprule T,U50");
-    // Robot.motionSubsystem.sendCommand("fore 50");
 
-		// Time.sleep(5000);
-    // Robot.motionSubsystem.sendCommand("curve -100 500");
-    Robot.motionSubsystem.sendCommand("rotate -65");
+		// === Demo 1
+		// Time.sleep(1000);
+		//   Robot.motionSubsystem.sendCommand("fore 600");
+		// --
+
+		// === Demo 2
+		  Robot.motionSubsystem.sendCommand("rotate -65");
 		Time.sleep(1000);
-    Robot.motionSubsystem.sendCommand("fore 600");
-    // Do something reasonable
+		  Robot.motionSubsystem.sendCommand("fore 600");
+		// --
+
+		// Do not consume all the CPU power
     while (isRunning()) {
-      // ...
       Time.sleep(1000);
-      // Do not consume all the CPU power
-      // ...
     }
   }
 
@@ -225,7 +227,7 @@ public class LocalizationController
 	public static int LOST_TRACE_THRESHOLD = 10;
 	public static int POINT_HISTORY_COUNT = 5;
 	public static double LAST_POINT_DIST = 150;
-	private PointList2D<Point> lastPoints = new ArrayPointList(POINT_HISTORY_COUNT);
+	private PointList2D<Point> lastPoints;
 	private int lastTimeSinceAdd = 0;
 	public void observedLidarPointsRaw(LidarPackageRaw lidarPackageRaw)
 	{
@@ -238,8 +240,10 @@ public class LocalizationController
 
 		DebugPainterOverlay pointOverlay = Robot.debugPainter.getOverlay("Raw LiDAR Points");
 		pointOverlay.clear();
-		for (ObservedLidarPointRaw lidarPoint : lidarPoints) {
+		for (int i = 0; i < lidarPoints.size(); i++) {
+			ObservedLidarPointRaw lidarPoint = lidarPoints.get(i);
 			if (!lidarPoint.isValid()) continue;
+
 			double theta = (lidarPoint.lidarAngle / 360) * 2 * Math.PI;
 			double y = Math.cos(theta) * lidarPoint.lidarDistance;
 			double x = Math.sin(theta) * lidarPoint.lidarDistance;
@@ -247,16 +251,21 @@ public class LocalizationController
 			// System.out.println("Point at " + lidarPoint.lidarAngle + ": " + new Point(x, y).toString());
 			// System.out.println("original dist: " + lidarPoint.lidarDistance);
 			// System.out.println("---");
-
-			pointOverlay.fillCircle(
-				x + lidarPackageRaw.observationPosX,
-				y + lidarPackageRaw.observationPosY,
-				10,
-				255, 0, 0, 255
-			);
 		}
+		PointList2D<Point> paintPoints = points.copyValuesFrom();
+		paintPoints.rotate0(-lidarPackageRaw.observationAngle * Math.PI/180);
+		paintPoints.translate(lidarPackageRaw.observationPosX, lidarPackageRaw.observationPosY);
+		for (Point p : paintPoints)
+			pointOverlay.fillCircle(
+				p.getX(),
+				p.getY(),
+				10,
+				255, 255, 0, 255
+			);
+		pointOverlay.fillPoly(paintPoints.getAll2D(), 255, 255, 0, 100);
 		pointOverlay.paint();
 
+		// Find isovist position
 		Isovist isovist = isovistGrid.findBestMatchingIsovist(points);
 		double[] isovistPos = isovist.getPos();
 
@@ -308,11 +317,5 @@ public class LocalizationController
 		overlay.paint();
 
 		isovist.paint(Robot.debugPainter.getOverlay("Matched Isovist"), "0000FF");
-
-		///
-
-		// DebugPainterOverlay isovistOverlay = Robot.debugPainter.getOverlay("Grid Isovist");
-		// Cell c = isovistGrid.get(isovistGrid.worldToGrid(Robot.motionSubsystem.estimateCurrentPosition()));
-		// c.getIsovist().paint(isovistOverlay, "00FF00");
 	}
 }

@@ -133,7 +133,7 @@ public interface Feature {
 		String key = cacheKey(pos);
 		double[] moments = momentCache.containsKey(key)
 			? momentCache.get(key)
-			: MomentCalculator.computeMomentValues(points, pos != null ? pos : new double[] { 0, 0 });
+			: MomentCalculator.computeMomentValues(points, pos);
 		if (!momentCache.containsKey(key) && key != null) momentCache.put(key, moments);
 		return moments;
 	}

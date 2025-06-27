@@ -150,15 +150,4 @@ public class Isovist {
 
 		return points;
 	}
-
-	public static PointList2D<Point> samplePointsFromLidar(LidarPackageSlam lidarPackage) {
-		ArrayList<ObservedLidarPointSlam> lidarPoints = lidarPackage.observedPoints;
-
-		PointList2D<Point> points = new ArrayPointList<>(lidarPoints.size());
-		for (ObservedLidarPointSlam p : lidarPoints)
-			points.addIfNotNull(p.isValid() ? new Point(p.x, p.y) : null);
-
-		GridPointCloud2D<Point> lidarCloud = new GridPointCloud2D(10, points);
-		return samplePointsFromCloud(lidarCloud, new double[] { lidarPackage.observationPosX, lidarPackage.observationPosY });
-	}
 }
