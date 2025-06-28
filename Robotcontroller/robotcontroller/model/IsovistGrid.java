@@ -1,4 +1,4 @@
-package isovist.model;
+package robotcontroller.model;
 
 import java.util.LinkedList;
 import java.util.Queue;

@@ -1,4 +1,4 @@
-package isovist.model;
+package robotcontroller.model;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -15,8 +15,8 @@ import basics.points.PointCloud2D;
 import basics.points.container.GridPointCloud2D;
 import basics.points.container.ArrayPointList;
 
-import isovist.model.features.Feature;
-import isovist.model.features.FeatureUtils;
+import robotcontroller.model.features.Feature;
+import robotcontroller.model.features.FeatureUtils;
 
 public class Isovist {
 	private double[] pos;

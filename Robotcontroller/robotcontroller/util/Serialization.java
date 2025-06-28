@@ -1,4 +1,4 @@
-package isovist.util;
+package robotcontroller.util;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -13,8 +13,8 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
 import java.io.File;
 
-import isovist.model.*;
-import isovist.model.features.*;
+import robotcontroller.model.*;
+import robotcontroller.model.features.*;
 
 import java.util.*;
 import java.util.stream.*;

@@ -1,4 +1,4 @@
-package isovist.model.features;
+package robotcontroller.model.features;
 
 import basics.points.Point;
 import basics.points.PointList2D;

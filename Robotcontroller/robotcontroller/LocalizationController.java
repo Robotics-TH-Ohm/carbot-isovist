@@ -1,4 +1,4 @@
-package isovist;
+package robotcontroller;
 
 import basics.math.Geom;
 import basics.points.PointCloudCreator2D;
@@ -56,11 +56,11 @@ import robotlib.driver.Driver;
 import robotlib.worldmodel.ObstacleContainer;
 import robotlib.worldmodel.ObstaclePoint;
 
-import isovist.model.IsovistGrid;
-import isovist.model.Cell;
-import isovist.model.Isovist;
+import robotcontroller.model.IsovistGrid;
+import robotcontroller.model.Cell;
+import robotcontroller.model.Isovist;
 
-import isovist.util.Serialization;
+import robotcontroller.util.Serialization;
 import org.w3c.dom.Document;
 
 public class LocalizationController

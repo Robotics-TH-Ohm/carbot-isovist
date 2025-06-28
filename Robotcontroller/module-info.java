@@ -1,13 +1,13 @@
 /**
  * This module contains the robot controllers.
- * @author J&ouml;rg Roth (<a href="mailto:Joerg.Roth@Wireless-earth.org">Joerg.Roth@Wireless-earth.org</a>)
+ * @author Nils Weber
  */
-module Isovist {
+module Robotcontroller {
   requires Basics;
   requires Robotinterface;
   requires Robotlib;
 
 	requires java.xml;
 
-  exports isovist;
+  exports robotcontroller;
 }

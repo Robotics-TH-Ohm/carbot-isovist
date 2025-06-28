@@ -1,4 +1,4 @@
-package isovist.model;
+package robotcontroller.model;
 
 public class Coordinate {
   private final int x;

@@ -3,15 +3,15 @@ SIM_LIBS_DIR = $(CARBOT_DIR)/sim_libs
 SIM_LIBS = $(SIM_LIBS_DIR)/jts.jar:$(SIM_LIBS_DIR)/commons-math.jar:$(SIM_LIBS_DIR)/opencv-249.jar
 SIM_JARS = $(CARBOT_DIR)/jars
 
-SRC_DIR = src
+SRC_DIR = Robotcontroller
 
 JAVA = java
 JAVAC = javac
 
 CARBOTSIM = $(JAVA) \
-	-cp .:$(CARBOT_DIR):$(SRC_DIR)/isovist \
-	-p $(CARBOT_DIR)/jars:$(SRC_DIR):$(SIM_LIBS) \
-	--add-modules Customsim,Isovist \
+	-cp .:$(CARBOT_DIR) \
+	-p .:$(CARBOT_DIR)/jars:$(SIM_LIBS) \
+	--add-modules Customsim,Robotcontroller \
 	-m Simulator \
 	-logdir logs \
 	-envscale 0.25 \
@@ -29,14 +29,10 @@ compile:
 
 run-localization:
 	$(CARBOTSIM) \
-		-c isovist.LocalizationController \
+		-c robotcontroller.LocalizationController \
 		-skills -vss,+lss,+lssslam -lidarslam sim -autorun
 
 run-mapping:
 	$(CARBOTSIM) \
-		-c isovist.MappingController \
+		-c robotcontroller.MappingController \
 		-skills -vss,+lss,+lssslam -lidarslam sim -autorun
-
-
-# -e $(CARBOT_DIR)/environments/drivedemo.txt \
-# -e $(CARBOT_DIR)/environments/environment.txt \

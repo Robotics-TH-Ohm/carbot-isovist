@@ -1,4 +1,4 @@
-package isovist.model;
+package robotcontroller.model;
 
 public class Cell {
   public static final byte REACHABLE = 0b0000_0001;
