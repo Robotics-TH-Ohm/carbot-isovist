@@ -37,7 +37,7 @@ public class MomentCalculator {
 			double c = cur.distanceTo2D(next);
 
 			// Normalize triangle lengths
-			double max = Math.max(Math.max(a, b), c);
+			double max = 600.0; // Math.max(Math.max(a, b), c);
 			a /= max;
 			b /= max;
 			c /= max;
